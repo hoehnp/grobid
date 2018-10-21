@@ -1751,6 +1751,169 @@ public class BiblioItem {
         return bibtex;
     }
 
+    /**
+     * Export to Zotero RDF format
+     */
+    public String toZoteroRDF() {
+		return toZoteroRDF("id");
+	}
+
+    /**
+     * Export to Zotero RDF  format
+     */
+    public String toZoteroRDF(String id) {
+        String bibtex = "";
+        try {
+
+            if (journal != null) {
+                bibtex += "@article{" + id + ",\n";
+            } else if (book_type != null) {
+                bibtex += "@techreport{" + id + ",\n";
+            } else if (bookTitle != null) {
+                if ((bookTitle.startsWith("proc")) || (bookTitle.startsWith("Proc")) ||
+                        (bookTitle.startsWith("In Proc")) || (bookTitle.startsWith("In proc"))) {
+                    bibtex += "@inproceedings{" + id + ",\n";
+                } else {
+                    bibtex += "@article{" + id + ",\n"; // ???
+                }
+            } else {
+                bibtex += "@misc{" + id + ",\n"; // ???
+            }
+
+            // author 
+            // fullAuthors has to be used instead
+            if (collaboration != null) {
+                bibtex += "author\t=\t\"" + collaboration;
+            } else if (fullAuthors != null) {
+                if (fullAuthors.size() > 0) {
+                    boolean begin = true;
+                    for (Person person : fullAuthors) {
+                        if (begin) {
+                            bibtex += "author\t=\t\"" + person.getFirstName() + " " + person.getLastName();
+                            begin = false;
+                        } else
+                            bibtex += " and " + person.getFirstName() + " " + person.getLastName();
+                    }
+                    bibtex += "\"";
+                }
+            } else if (authors != null) {
+                StringTokenizer st = new StringTokenizer(authors, ";");
+                if (st.countTokens() > 1) {
+                    boolean begin = true;
+                    while (st.hasMoreTokens()) {
+                        String author = st.nextToken();
+                        if (author != null)
+                            author = author.trim();
+                        if (begin) {
+                            bibtex += "author\t=\t\"" + author;
+                            begin = false;
+                        } else
+                            bibtex += " and " + author;
+
+                    }
+                    bibtex += "\"";
+                } else {
+                    if (authors != null)
+                        bibtex += "author\t=\t\"" + authors + "\"";
+                }
+            }
+
+            // title
+            if (title != null) {
+                bibtex += ",\ntitle\t=\t\"" + title + "\"";
+            }
+
+            // journal
+            if (journal != null) {
+                bibtex += ",\njournal\t=\t\"" + journal + "\"";
+            }
+
+            // booktitle
+            if ((journal == null) && (book_type == null) && (bookTitle != null)) {
+                bibtex += ",\nbooktitle\t=\t\"" + bookTitle + "\"";
+            }
+
+            // publisher
+            if (publisher != null) {
+                bibtex += ",\npublisher\t=\t\"" + publisher + "\"";
+            }
+
+            // editors
+            if (editors != null) {
+                String locEditors = editors.replace(" ; ", " and ");
+                bibtex += ",\neditor\t=\t\"" + locEditors + "\"";
+            }
+            // fullEditors has to be used instead
+
+            // year
+            if (publication_date != null) {
+                bibtex += ",\nyear\t=\t\"" + publication_date + "\"";
+            }
+
+            // location
+            if (location != null) {
+                bibtex += ",\naddress\t=\t\"" + location + "\"";
+            }
+
+            // pages
+            if (pageRange != null) {
+                bibtex += ",\npages\t=\t\"" + pageRange + "\"";
+            }
+
+			// volume
+			if (volumeBlock != null) {
+				bibtex += ",\nvolume\t=\t\"" + volumeBlock + "\"";
+			}
+
+			// issue (named number in BibTeX)
+			if (issue != null) {
+				bibtex += ",\nnumber\t=\t\"" + issue + "\"";
+			}
+
+            // DOI
+            if (!StringUtils.isEmpty(doi)) {
+                bibtex += ",\ndoi\t=\t\"" + doi + "\"";
+            }
+
+            // arXiv identifier
+            if (!StringUtils.isEmpty(arXivId)) {
+                bibtex += ",\neprint\t=\t\"" + arXivId + "\"";
+            }
+            /* note that the following is now recommended for arXiv citations: 
+                    archivePrefix = "arXiv",
+                    eprint        = "0707.3168",
+                    primaryClass  = "hep-th",
+                (here old identifier :( ))
+                see https://arxiv.org/hypertex/bibstyles/
+            */
+
+            // abstract
+            if (!StringUtils.isEmpty(abstract_)) {
+                bibtex += ",\nabstract\t=\t\"" + abstract_ + "\"";
+            }
+
+            // keywords
+            if (keywords != null) {
+                bibtex += ",\nkeywords\t=\t\"";
+                boolean begin = true;
+                for (Keyword keyw : keywords) {
+					if ( (keyw.getKeyword() == null) || (keyw.getKeyword().length() == 0) )
+						continue;
+                    if (begin) {
+                        begin = false;
+                        bibtex += keyw.getKeyword();
+                    } else
+                        bibtex += ", " + keyw.getKeyword();
+                }
+                bibtex += "\"";
+            }
+
+            bibtex += "\n}\n";
+        } catch (Exception e) {
+            throw new GrobidException("Cannot export BibTex format, because of nested exception.", e);
+        }
+        return bibtex;
+    }
     /** 
      * Check if the identifier pubnum is a DOI or an arXiv identifier. If yes, instanciate 
      * the corresponding field and reset the generic pubnum field.
